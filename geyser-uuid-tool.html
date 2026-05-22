@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geyser UUID Tool</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0b0f0e;
+      color: #c8d8c4;
+      font-family: 'Courier New', 'Lucida Console', monospace;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 32px 40px 24px;
+      border-bottom: 1px solid #1e3028;
+      background: linear-gradient(180deg, #0d1510 0%, #0b0f0e 100%);
+    }
+    .header-row { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .header-icon {
+      width: 38px; height: 38px; border-radius: 6px; flex-shrink: 0;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; box-shadow: 0 0 18px #22c55e44;
+    }
+    h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: #e8f5e0; }
+    .header-sub { font-size: 11px; color: #4a7a5a; letter-spacing: 0.12em; margin-top: 3px; }
+    .header-desc { margin-top: 12px; font-size: 12px; color: #4d6b56; max-width: 560px; line-height: 1.6; }
+    .header-desc span { color: #22c55e; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #1e3028;
+      padding: 0 40px;
+      background: #0b0f0e;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 14px 20px;
+      font-size: 11px; letter-spacing: 0.12em; font-weight: 600;
+      font-family: inherit; color: #3d5a46;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px; white-space: nowrap;
+      transition: color 0.15s;
+    }
+    .tab-btn.active { color: #22c55e; border-bottom-color: #22c55e; }
+
+    /* ── Main ── */
+    main { flex: 1; padding: 36px 40px; max-width: 700px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Form elements ── */
+    label.field-label {
+      display: block; font-size: 11px; letter-spacing: 0.14em;
+      color: #4a7a5a; font-weight: 700; margin-bottom: 4px;
+    }
+    .input-row { display: flex; gap: 10px; margin-top: 8px; }
+    input, textarea {
+      flex: 1; background: #0d1510; border: 1px solid #1e3028;
+      color: #c8d8c4; padding: 10px 14px; font-size: 13px;
+      font-family: 'Courier New', monospace; border-radius: 4px;
+      outline: none; width: 100%;
+    }
+    textarea { resize: vertical; line-height: 1.7; }
+    input:focus, textarea:focus { border-color: #22c55e44; }
+    .hint { font-size: 11px; color: #2d4a36; margin-top: 6px; }
+    .hint span { color: #22c55e; }
+
+    /* ── Buttons ── */
+    .btn {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      color: #e8f5e0; border: none; cursor: pointer;
+      padding: 10px 20px; font-size: 11px; letter-spacing: 0.14em;
+      font-weight: 700; font-family: inherit; border-radius: 4px;
+      white-space: nowrap; box-shadow: 0 0 12px #22c55e22;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled {
+      background: linear-gradient(135deg, #1a3a22 0%, #162e1c 100%);
+      color: #3d5a46; cursor: not-allowed; box-shadow: none;
+    }
+    .btn-secondary {
+      background: #1e3028; color: #22c55e;
+    }
+    .copy-btn {
+      background: none; border: 1px solid #1e3028; cursor: pointer;
+      color: #3d5a46; font-size: 11px; font-family: inherit;
+      padding: 3px 10px; border-radius: 3px; white-space: nowrap;
+      transition: color 0.15s;
+    }
+    .copy-btn.copied { color: #22c55e; }
+
+    /* ── Result card ── */
+    .result-card {
+      margin-top: 24px; padding: 20px 24px;
+      border: 1px solid #1e3028; border-left: 3px solid #22c55e;
+      background: #0d1510; border-radius: 4px;
+    }
+    .result-row { margin-bottom: 14px; }
+    .result-label { font-size: 10px; color: #4a7a5a; letter-spacing: 0.14em; margin-bottom: 4px; }
+    .result-value-row { display: flex; align-items: center; gap: 10px; }
+    .result-value { font-size: 14px; color: #e8f5e0; letter-spacing: 0.04em; word-break: break-all; }
+
+    .breakdown { margin-top: 16px; padding-top: 16px; border-top: 1px solid #1e3028; }
+    .breakdown-label { font-size: 10px; color: #4a7a5a; letter-spacing: 0.14em; margin-bottom: 8px; }
+    .breakdown-uuid { font-size: 12px; font-family: inherit; display: flex; gap: 2px; flex-wrap: wrap; }
+    .breakdown-uuid .dim { color: #2d4a36; }
+    .breakdown-uuid .highlight { color: #22c55e; }
+    .breakdown-note { font-size: 10px; color: #2d4a36; margin-top: 6px; }
+    .breakdown-note span { color: #4a7a5a; }
+
+    /* ── Error box ── */
+    .error-box {
+      margin-top: 16px; padding: 12px 16px;
+      border: 1px solid #3d1a1a; border-left: 3px solid #f87171;
+      background: #150e0e; color: #f87171; font-size: 12px; border-radius: 4px;
+    }
+
+    /* ── Bulk table ── */
+    .bulk-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 24px; }
+    .bulk-table th {
+      padding: 8px 12px; text-align: left; color: #4a7a5a;
+      letter-spacing: 0.1em; font-weight: 600; border-bottom: 1px solid #1e3028;
+    }
+    .bulk-table td { padding: 8px 12px; border-bottom: 1px solid #131c17; }
+    .bulk-table tr:nth-child(odd) td { background: #0e1712; }
+    .td-input { color: #4d6b56; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-type { letter-spacing: 0.08em; }
+    .td-type.ok { color: #22c55e; }
+    .td-type.err { color: #f87171; }
+    .td-output { color: #c8d8c4; font-family: inherit; }
+    .td-output.err { color: #f87171; }
+    .inline-copy {
+      margin-left: 8px; background: none; border: none; cursor: pointer;
+      color: #3d5a46; font-size: 11px; font-family: inherit; padding: 0;
+    }
+    .inline-copy.copied { color: #22c55e; }
+
+    /* ── Info panel ── */
+    .info-panel { line-height: 1.8; font-size: 13px; color: #7aaa84; }
+    .info-section { margin-bottom: 28px; }
+    .info-title { font-size: 10px; color: #22c55e; letter-spacing: 0.16em; font-weight: 700; margin-bottom: 10px; }
+    .info-panel code {
+      background: #0d1510; border: 1px solid #1e3028;
+      padding: 1px 6px; border-radius: 3px; color: #22c55e; font-size: 12px;
+    }
+    .info-panel pre {
+      background: #0d1510; border: 1px solid #1e3028;
+      padding: 14px 16px; border-radius: 4px; color: #4a7a5a;
+      font-size: 12px; line-height: 1.8; overflow-x: auto; margin: 8px 0;
+      font-family: 'Courier New', monospace;
+    }
+    .info-panel ul { padding-left: 20px; margin: 8px 0; }
+    .info-panel li { margin-bottom: 4px; }
+
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+
+    @media (max-width: 600px) {
+      header, main { padding-left: 20px; padding-right: 20px; }
+      .tabs { padding: 0 20px; }
+      .input-row { flex-direction: column; }
+      .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-row">
+      <div class="header-icon">⛏</div>
+      <div>
+        <h1>GEYSER UUID TOOL</h1>
+        <div class="header-sub">FLOODGATE · BEDROCK EDITION · XUID CONVERTER</div>
+      </div>
+    </div>
+    <p class="header-desc">
+      Geyser/Floodgate generates deterministic UUIDs for Bedrock players in the format
+      <span>00000000-0000-0000-XXXX-XXXXXXXXXXXX</span>
+      where the last 16 hex chars encode the player's XUID.
+    </p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="gamertag">GAMERTAG</button>
+    <button class="tab-btn" data-tab="xuid">XUID → UUID</button>
+    <button class="tab-btn" data-tab="uuid">UUID → XUID</button>
+    <button class="tab-btn" data-tab="bulk">BULK</button>
+    <button class="tab-btn" data-tab="info">ABOUT</button>
+  </div>
+
+  <main>
+
+    <!-- ── GAMERTAG ── -->
+    <div class="panel active" id="panel-gamertag">
+      <label class="field-label" for="gt-input">Xbox Gamertag</label>
+      <div class="input-row">
+        <input id="gt-input" type="text" placeholder="e.g. Ninjase2020" maxlength="16" />
+        <button class="btn" id="gt-btn">LOOKUP</button>
+      </div>
+      <p class="hint">
+        Looks up the player's XUID via the <span>GeyserMC Global API</span>.
+        The player must have connected to a Geyser server at least once to be in the cache.
+      </p>
+      <div id="gt-result"></div>
+    </div>
+
+    <!-- ── XUID → UUID ── -->
+    <div class="panel" id="panel-xuid">
+      <label class="field-label" for="xuid-input">Player XUID</label>
+      <div class="input-row">
+        <input id="xuid-input" type="text" placeholder="e.g. 2535416409498934" />
+        <button class="btn" id="xuid-btn">CONVERT</button>
+      </div>
+      <p class="hint">Enter the player's 64-bit Xbox User ID (XUID) — a numeric string.</p>
+      <div id="xuid-result"></div>
+    </div>
+
+    <!-- ── UUID → XUID ── -->
+    <div class="panel" id="panel-uuid">
+      <label class="field-label" for="uuid-input">Floodgate UUID</label>
+      <div class="input-row">
+        <input id="uuid-input" type="text" placeholder="e.g. 00000000-0000-0000-0009-011234567890" />
+        <button class="btn" id="uuid-btn">CONVERT</button>
+      </div>
+      <p class="hint">Paste a Floodgate UUID starting with <span>00000000-0000-0000</span></p>
+      <div id="uuid-result"></div>
+    </div>
+
+    <!-- ── BULK ── -->
+    <div class="panel" id="panel-bulk">
+      <label class="field-label" for="bulk-input">Bulk Input</label>
+      <p class="hint" style="margin-bottom:8px">One entry per line. Auto-detects XUIDs (digits) or Floodgate UUIDs.</p>
+      <textarea id="bulk-input" rows="7" placeholder="2535416409498934&#10;00000000-0000-0000-0009-011234567890&#10;2535412345678901"></textarea>
+      <div class="btn-row">
+        <button class="btn" id="bulk-btn">CONVERT ALL</button>
+        <button class="btn btn-secondary" id="bulk-csv-btn" style="display:none">COPY CSV</button>
+      </div>
+      <div id="bulk-result"></div>
+    </div>
+
+    <!-- ── INFO ── -->
+    <div class="panel info-panel" id="panel-info">
+      <div class="info-section">
+        <div class="info-title">HOW FLOODGATE UUIDS WORK</div>
+        <p>Geyser's Floodgate plugin assigns every Bedrock Edition player a deterministic UUID based on their XUID (Xbox User ID).
+        The UUID always starts with <code>00000000-0000-0000-</code> and the remaining 16 hex characters
+        are the XUID encoded as a big-endian 64-bit integer.</p>
+      </div>
+      <div class="info-section">
+        <div class="info-title">UUID FORMAT</div>
+        <pre>00000000-0000-0000-HHHH-HHHHHHHHHHHH
+│                   └── XUID as 16-char hex (big-endian)
+└── always zero prefix (marks as Bedrock player)</pre>
+      </div>
+      <div class="info-section">
+        <div class="info-title">EXAMPLE</div>
+        <pre>XUID:  2535416409498934
+  hex: 0009011234567890 (16 chars)
+UUID: 00000000-0000-0000-0009-011234567890</pre>
+      </div>
+      <div class="info-section">
+        <div class="info-title">USE CASES</div>
+        <ul>
+          <li>Look up Bedrock players in your server database</li>
+          <li>Ban/whitelist by UUID on hybrid Java+Bedrock servers</li>
+          <li>Identify Bedrock players in plugin logs</li>
+          <li>Map XUIDs from Xbox Live API to in-game UUIDs</li>
+        </ul>
+      </div>
+    </div>
+
+  </main>
+
+  <footer style="padding: 16px 40px; border-top: 1px solid #1e3028; font-size: 11px; color: #2d4a36; letter-spacing: 0.08em;">
+    ⚠ This tool was built with the assistance of AI. Always verify results independently.
+  </footer>
+
+  <script>
+    // ── UUID logic ────────────────────────────────────────────────────────────
+
+    function xuidToFloodgateUUID(xuid) {
+      const n = BigInt(xuid);
+      if (n < 0n || n > 0xFFFFFFFFFFFFFFFFn) throw new Error("XUID out of range");
+      const hex = n.toString(16).padStart(16, "0");
+      return `00000000-0000-0000-${hex.slice(0, 4)}-${hex.slice(4)}`;
+    }
+
+    function floodgateUUIDToXUID(uuid) {
+      const clean = uuid.replace(/-/g, "").toLowerCase();
+      if (!/^[0-9a-f]{32}$/.test(clean)) throw new Error("Invalid UUID format");
+      if (clean.slice(0, 16) !== "0000000000000000")
+        throw new Error("Not a Floodgate UUID (prefix must be 00000000-0000-0000)");
+      return BigInt("0x" + clean.slice(16)).toString(10);
+    }
+
+    function isValidXUID(val) {
+      try {
+        const n = BigInt(val);
+        return n > 0n && n <= 0xFFFFFFFFFFFFFFFFn;
+      } catch { return false; }
+    }
+
+    // ── Clipboard ─────────────────────────────────────────────────────────────
+
+    function copyText(text, btn, label = "COPY") {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = btn.dataset.copiedLabel || "COPIED ✓";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = label;
+          btn.classList.remove("copied");
+        }, 1500);
+      });
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────────────
+
+    function renderError(msg) {
+      return `<div class="error-box">✗ ${msg}</div>`;
+    }
+
+    function renderResultCard(rows, xuid, uuid) {
+      const hex = BigInt(xuid).toString(16).padStart(16, "0");
+      const rowsHtml = rows.map(({ label, value, key }) => `
+        <div class="result-row">
+          <div class="result-label">${label}</div>
+          <div class="result-value-row">
+            <span class="result-value">${value}</span>
+            <button class="copy-btn" data-copy="${value}" data-key="${key}">COPY</button>
+          </div>
+        </div>`).join("");
+
+      return `
+        <div class="result-card">
+          ${rowsHtml}
+          <div class="breakdown">
+            <div class="breakdown-label">BREAKDOWN</div>
+            <div class="breakdown-uuid">
+              <span class="dim">00000000-0000-0000-</span><span class="highlight">${hex.slice(0,4)}</span><span class="dim">-</span><span class="highlight">${hex.slice(4)}</span>
+            </div>
+            <div class="breakdown-note">
+              ↑ zero prefix (bedrock marker) &nbsp;&nbsp; ↑ XUID = <span>0x${hex}</span> = ${xuid}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function bindCopyButtons(container) {
+      container.querySelectorAll("[data-copy]").forEach(btn => {
+        btn.addEventListener("click", () => copyText(btn.dataset.copy, btn));
+      });
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // ── GAMERTAG ──────────────────────────────────────────────────────────────
+
+    const gtInput = document.getElementById("gt-input");
+    const gtBtn   = document.getElementById("gt-btn");
+    const gtResult = document.getElementById("gt-result");
+
+    async function doGamertagLookup() {
+      gtResult.innerHTML = "";
+      const gt = gtInput.value.trim();
+      if (!gt) { gtResult.innerHTML = renderError("Please enter an Xbox Gamertag."); return; }
+      if (gt.length > 16) { gtResult.innerHTML = renderError("Gamertag must be 1–16 characters."); return; }
+
+      gtBtn.disabled = true;
+      gtBtn.textContent = "LOOKING UP…";
+      try {
+        const res = await fetch(`https://api.geysermc.org/v2/xbox/xuid/${encodeURIComponent(gt)}`);
+        if (res.status === 404) {
+          gtResult.innerHTML = renderError("Gamertag not found. The player may not have connected via Geyser yet, or the name is incorrect.");
+          return;
+        }
+        if (!res.ok) {
+          gtResult.innerHTML = renderError(`API error ${res.status}. GeyserMC may be rate-limited or unavailable.`);
+          return;
+        }
+        const data = await res.json();
+        if (!data.xuid) { gtResult.innerHTML = renderError("Unexpected API response — no XUID returned."); return; }
+
+        const uuid = xuidToFloodgateUUID(data.xuid);
+        gtResult.innerHTML = renderResultCard([
+          { label: "Gamertag",       value: gt,       key: "gt-gamertag" },
+          { label: "XUID",           value: data.xuid, key: "gt-xuid" },
+          { label: "Floodgate UUID", value: uuid,      key: "gt-uuid" },
+        ], data.xuid, uuid);
+        bindCopyButtons(gtResult);
+      } catch {
+        gtResult.innerHTML = renderError("Network error. Check your connection or try again shortly.");
+      } finally {
+        gtBtn.disabled = false;
+        gtBtn.textContent = "LOOKUP";
+      }
+    }
+
+    gtBtn.addEventListener("click", doGamertagLookup);
+    gtInput.addEventListener("keydown", e => { if (e.key === "Enter") doGamertagLookup(); });
+
+    // ── XUID → UUID ───────────────────────────────────────────────────────────
+
+    const xuidInput  = document.getElementById("xuid-input");
+    const xuidBtn    = document.getElementById("xuid-btn");
+    const xuidResult = document.getElementById("xuid-result");
+
+    function doXuidConvert() {
+      xuidResult.innerHTML = "";
+      const val = xuidInput.value.trim();
+      if (!val) { xuidResult.innerHTML = renderError("Please enter an XUID."); return; }
+      if (!isValidXUID(val)) { xuidResult.innerHTML = renderError("Invalid XUID. Must be a positive 64-bit integer."); return; }
+      try {
+        const uuid = xuidToFloodgateUUID(val);
+        xuidResult.innerHTML = renderResultCard([
+          { label: "Floodgate UUID", value: uuid, key: "x-uuid" },
+          { label: "XUID",           value: val,  key: "x-xuid" },
+        ], val, uuid);
+        bindCopyButtons(xuidResult);
+      } catch (e) { xuidResult.innerHTML = renderError(e.message); }
+    }
+
+    xuidBtn.addEventListener("click", doXuidConvert);
+    xuidInput.addEventListener("keydown", e => { if (e.key === "Enter") doXuidConvert(); });
+
+    // ── UUID → XUID ───────────────────────────────────────────────────────────
+
+    const uuidInput  = document.getElementById("uuid-input");
+    const uuidBtn    = document.getElementById("uuid-btn");
+    const uuidResult = document.getElementById("uuid-result");
+
+    function doUUIDConvert() {
+      uuidResult.innerHTML = "";
+      const val = uuidInput.value.trim();
+      if (!val) { uuidResult.innerHTML = renderError("Please enter a UUID."); return; }
+      try {
+        const xuid = floodgateUUIDToXUID(val);
+        const uuid  = val;
+        uuidResult.innerHTML = renderResultCard([
+          { label: "XUID", value: xuid, key: "u-xuid" },
+          { label: "UUID", value: uuid, key: "u-uuid" },
+        ], xuid, uuid);
+        bindCopyButtons(uuidResult);
+      } catch (e) { uuidResult.innerHTML = renderError(e.message); }
+    }
+
+    uuidBtn.addEventListener("click", doUUIDConvert);
+    uuidInput.addEventListener("keydown", e => { if (e.key === "Enter") doUUIDConvert(); });
+
+    // ── BULK ──────────────────────────────────────────────────────────────────
+
+    const bulkInput   = document.getElementById("bulk-input");
+    const bulkBtn     = document.getElementById("bulk-btn");
+    const bulkCsvBtn  = document.getElementById("bulk-csv-btn");
+    const bulkResult  = document.getElementById("bulk-result");
+    let   bulkData    = [];
+
+    bulkBtn.addEventListener("click", () => {
+      bulkResult.innerHTML = "";
+      bulkData = [];
+      const lines = bulkInput.value.split("\n").map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return;
+
+      bulkData = lines.map(line => {
+        try {
+          if (/^\d+$/.test(line)) {
+            if (!isValidXUID(line)) return { input: line, error: "Invalid XUID" };
+            return { input: line, type: "XUID", output: xuidToFloodgateUUID(line) };
+          } else {
+            return { input: line, type: "UUID", output: floodgateUUIDToXUID(line) };
+          }
+        } catch (e) { return { input: line, error: e.message }; }
+      });
+
+      const rows = bulkData.map((r, i) => `
+        <tr>
+          <td class="td-input" title="${r.input}">${r.input}</td>
+          <td class="td-type ${r.error ? 'err' : 'ok'}">${r.error ? "ERROR" : r.type}</td>
+          <td class="${r.error ? 'td-output err' : 'td-output'}">
+            ${r.error ? r.error : r.output}
+            ${!r.error ? `<button class="inline-copy" data-copy="${r.output}" data-idx="${i}">[copy]</button>` : ""}
+          </td>
+        </tr>`).join("");
+
+      bulkResult.innerHTML = `
+        <table class="bulk-table">
+          <thead><tr><th>INPUT</th><th>TYPE</th><th>OUTPUT</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+      bulkResult.querySelectorAll(".inline-copy").forEach(btn => {
+        btn.addEventListener("click", () => {
+          navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+            btn.textContent = "✓";
+            btn.classList.add("copied");
+            setTimeout(() => { btn.textContent = "[copy]"; btn.classList.remove("copied"); }, 1500);
+          });
+        });
+      });
+
+      bulkCsvBtn.style.display = "inline-block";
+    });
+
+    bulkCsvBtn.addEventListener("click", () => {
+      const csv = ["Input,Type,Output,Error"]
+        .concat(bulkData.map(r =>
+          `"${r.input}","${r.type||""}","${r.output||""}","${r.error||""}"`
+        )).join("\n");
+      navigator.clipboard.writeText(csv).then(() => {
+        const orig = bulkCsvBtn.textContent;
+        bulkCsvBtn.textContent = "COPIED ✓";
+        setTimeout(() => bulkCsvBtn.textContent = orig, 1500);
+      });
+    });
+
+  </script>
+</body>
+</html>
